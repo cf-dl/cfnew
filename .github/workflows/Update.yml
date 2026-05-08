@@ -2,7 +2,7 @@ name: "Auto Update"
 on:
   workflow_dispatch:
   schedule:
-    - cron: "*/10 * * * *"
+    - cron: "0/10 * * * *"
 env:
   TZ: Asia/Shanghai
 
@@ -18,21 +18,35 @@ jobs:
 
       - name: Get _worker.js
         run: |
-          curl -sL "https://raw.githubusercontent.com/byJoey/cfnew/refs/heads/main/%E5%B0%91%E5%B9%B4%E4%BD%A0%E7%9B%B8%E4%BF%A1%E5%85%89%E5%90%97" -o ${GITHUB_WORKSPACE}/_worker.js
-          curl -sL "https://raw.githubusercontent.com/byJoey/cfnew/refs/heads/main/wrangler.toml" -o ${GITHUB_WORKSPACE}/wrangler.toml
+          curl -sL "https://github.com/byJoey/cfnew/raw/refs/heads/main/%E5%B0%91%E5%B9%B4%E4%BD%A0%E7%9B%B8%E4%BF%A1%E5%85%89%E5%90%97" -o ${GITHUB_WORKSPACE}/_worker.js
+          curl -sL "https://github.com/byJoey/cfnew/raw/refs/heads/main/wrangler.toml" -o ${GITHUB_WORKSPACE}/wrangler.toml
 
       - name: Creat Message
         id: msg
         run: echo "commit_message=Update $(date +"%Y-%m-%d %H:%M:%S")" >> "$GITHUB_OUTPUT"
  
       - name: Apply Changes
+        id: commit
         uses: stefanzweifel/git-auto-commit-action@master
         with:
          commit_message: ${{ steps.msg.outputs.commit_message }}
          branch: main
-         commit_user_name: cf-dl
-         commit_user_email: ${{ secrets.EMAIL }}
-         commit_author: cf-dl <${{ secrets.EMAIL }}>
+
+      - name: Generate ZIP
+        id: zip
+        if: steps.commit.outputs.changes_detected == 'true'
+        run: |
+          ver=$(curl -skL https://github.com/byJoey/cfnew/raw/refs/heads/main/%E6%98%8E%E6%96%87%E6%BA%90%E5%90%97 |grep "版本:" | sed 's,.*\(v[0-9]\+.[0-9]\+.[0-9]\+\),\1,')
+          zip worker.zip _worker.js
+          echo "ver=${ver}" >> $GITHUB_OUTPUT
+          echo "status=success" >> $GITHUB_OUTPUT
+
+      - name: Publish Release
+        if: steps.zip.outputs.status == 'success'
+        uses: softprops/action-gh-release@master
+        with:
+          tag_name: ${{ steps.zip.outputs.ver }}
+          files: worker.zip
 
       - name: Delete workflow runs
         uses: Mattraks/delete-workflow-runs@main
