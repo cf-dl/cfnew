@@ -28,7 +28,7 @@ jobs:
       - name: Get Latest
         id: compare
         run: |
-          Latest=$(curl -skL https://api.github.com/repos/hubbylei/cfnew/releases/latest | jq -r .tag_name | awk -F "-" '{print $2}')
+          Latest=$(curl -skL https://api.github.com/repos/cf-dl/cfnew/releases/latest | jq -r .tag_name | awk -F "-" '{print $2}')
           echo "Latest:${Latest}"
           if [ "${{ steps.Gcode.outputs.hash }}" == "${Latest}" ];then
             echo "update=false" >> "$GITHUB_OUTPUT"
