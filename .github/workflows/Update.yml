@@ -30,6 +30,7 @@ jobs:
         run: |
           Latest=$(curl -skL https://api.github.com/repos/cf-dl/cfnew/releases/latest | jq -r .tag_name | awk -F "-" '{print $2}')
           echo "Latest:${Latest}"
+          echo "Current:${{ steps.Gcode.outputs.hash }}"
           if [ "${{ steps.Gcode.outputs.hash }}" == "${Latest}" ];then
             echo "update=false" >> "$GITHUB_OUTPUT"
           else
@@ -129,9 +130,10 @@ jobs:
          branch: main
 
       - name: Get Ver
+        if: steps.compare.outputs.update == 'true'
         id: ver
         run: |
-          ver=$(grep "版本:" ${GITHUB_WORKSPACE}/明文源码 | sed 's,.*\([0-9]\+.[0-9]\+.[0-9]\+.*\),\1,' | sed 's, ,,g')
+          ver=$(awk 'NR==2{print $0}' ${GITHUB_WORKSPACE}/明文源码 | awk '{print $3}')
           echo ${ver}
           echo "ver=${ver}" >> $GITHUB_OUTPUT
           echo "status=success" >> $GITHUB_OUTPUT
@@ -147,7 +149,7 @@ jobs:
         if: steps.zip.outputs.status == 'success'
         uses: softprops/action-gh-release@master
         with:
-          tag_name: v${{ steps.ver.outputs.ver }}-${{ steps.Gcode.outputs.hash }}
+          tag_name: ${{ steps.ver.outputs.ver }}-${{ steps.Gcode.outputs.hash }}
           body: ${{ steps.msg.outputs.commit_message }}
           files: Pages-${{ steps.ver.outputs.ver }}-${{ steps.Gcode.outputs.hash }}.zip
 
